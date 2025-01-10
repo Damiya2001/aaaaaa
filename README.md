@@ -1,145 +1,100 @@
+#include <stdio.h>
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
+#define MAX_QUEUE 10  // Maximum size of the queue
+#define MAX_LIST 10   // Maximum size of the list
 
-   public class Registration {
-        public static void main(String[] args) {
-            // Create the main frame
-            JFrame frame = new JFrame("Sign-Up Form");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(500, 400);
-            frame.setLayout(new BorderLayout());
+typedef struct {
+    int count;
+    double entry[MAX_LIST];
+} List;
 
-            // Create a panel with padding and background color
-            JPanel panel = new JPanel();
-            panel.setLayout(new GridBagLayout());
-            panel.setBackground(new Color(240, 248, 255)); // Light blue background
-            panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Padding around the panel
+typedef struct {
+    int front;
+    int rear;
+    double items[MAX_QUEUE];
+} Queue;
 
-            // Set layout constraints
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.insets = new Insets(10, 10, 10, 10); // Margins between components
-            gbc.fill = GridBagConstraints.HORIZONTAL;
+void createQ(Queue *q) {
+    q->front = 0;
+    q->rear = -1;
+}
 
-            // Add components with labels
-            JLabel nameLabel = new JLabel("Name:");
-            nameLabel.setFont(new Font("Arial",Font.BOLD,20));
-            nameLabel.setForeground(new Color(0, 102, 204)); // Set label color
-            gbc.gridx = 0;
-            gbc.gridy = 0;
-            panel.add(nameLabel, gbc);
+int isFull(Queue *q) {
+    return q->rear == MAX_QUEUE - 1;
+}
 
-            JTextField nameField = new JTextField();
-            gbc.gridx = 1;
-            gbc.gridy = 0;
-            panel.add(nameField, gbc);
+int isEmpty(Queue *q) {
+    return q->rear < q->front;
+}
 
-            JLabel emailLabel = new JLabel("Email:");
-            emailLabel.setForeground(new Color(0, 102, 204)); // Set label color
-            gbc.gridx = 0;
-            gbc.gridy = 1;
-            panel.add(emailLabel, gbc);
+void appendQ(Queue *q, double value) {
+    if (isFull(q)) {
+        printf("Queue is full\n");
+        return;
+    }
+    q->rear++;
+    q->items[q->rear] = value;
+}
 
-            JTextField emailField = new JTextField();
-            gbc.gridx = 1;
-            gbc.gridy = 1;
-            panel.add(emailField, gbc);
+double serveQ(Queue *q) {
+    if (isEmpty(q)) {
+        printf("Queue is empty\n");
+        return -1;  // Return an invalid value to indicate error
+    }
+    double value = q->items[q->front];
+    q->front++;
+    return value;
+}
 
-            JLabel genderLabel = new JLabel("Gender:");
-            genderLabel.setForeground(new Color(0, 102, 204)); // Set label color
-            gbc.gridx = 0;
-            gbc.gridy = 2;
-            panel.add(genderLabel, gbc);
-
-            // Create radio buttons for gender
-            JRadioButton maleButton = new JRadioButton("Male");
-            JRadioButton femaleButton = new JRadioButton("Female");
-            JRadioButton otherButton = new JRadioButton("Other");
-            ButtonGroup genderGroup = new ButtonGroup();
-            genderGroup.add(maleButton);
-            genderGroup.add(femaleButton);
-            genderGroup.add(otherButton);
-
-            JPanel genderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            genderPanel.setBackground(new Color(240, 248, 255)); // Match panel background
-            genderPanel.add(maleButton);
-            genderPanel.add(femaleButton);
-            genderPanel.add(otherButton);
-
-            gbc.gridx = 1;
-            gbc.gridy = 2;
-            panel.add(genderPanel, gbc);
-
-            JLabel passwordLabel = new JLabel("Password:");
-            passwordLabel.setForeground(new Color(0, 102, 204)); // Set label color
-            gbc.gridx = 0;
-            gbc.gridy = 3;
-            panel.add(passwordLabel, gbc);
-
-            JPasswordField passwordField = new JPasswordField();
-            gbc.gridx = 1;
-            gbc.gridy = 3;
-            panel.add(passwordField, gbc);
-
-            // Add the sign-up button
-            JButton signUpButton = new JButton("Sign Up");
-            signUpButton.setBackground(new Color(0, 102, 204)); // Button background color
-            signUpButton.setForeground(Color.WHITE); // Button text color
-            signUpButton.setFocusPainted(false); // Remove focus border
-            gbc.gridx = 0;
-            gbc.gridy = 4;
-            gbc.gridwidth = 2; // Span across two columns
-            gbc.fill = GridBagConstraints.CENTER;
-            panel.add(signUpButton, gbc);
-
-            // Add panel to frame
-            frame.add(panel, BorderLayout.CENTER);
-            frame.setVisible(true);
-
-            // Add action listener for the button
-            signUpButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    String name = nameField.getText();
-                    String email = emailField.getText();
-                    String password = new String(passwordField.getPassword());
-
-                    String gender = null;
-                    if (maleButton.isSelected()) {
-                        gender = "Male";
-                    } else if (femaleButton.isSelected()) {
-                        gender = "Female";
-                    } else if (otherButton.isSelected()) {
-                        gender = "Other";
-                    }
-
-                    if (gender == null) {
-                        JOptionPane.showMessageDialog(frame, "Please select a gender!");
-                        return;
-                    }
-
-                    try {
-                        Connection connection = DriverManager.getConnection(
-                                "jdbc:mysql://localhost:3306/signup", "root", "");
-                        String query = "INSERT INTO user (Name, Email, Gender, Password) VALUES (?, ?, ?, ?)";
-                        PreparedStatement statement = connection.prepareStatement(query);
-                        statement.setString(1, name);
-                        statement.setString(2, email);
-                        statement.setString(3, gender);
-                        statement.setString(4, password);
-
-                        statement.executeUpdate();
-                        JOptionPane.showMessageDialog(frame, "Sign-Up Successful!");
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
-                    }
-                }
-            });
+void bubbleSort(double arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - 1 - i; j++) {
+            if (arr[j] > arr[j + 1]) {  // Sort in ascending order
+                double temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
         }
     }
+}
 
+double computeMeanOfLargestFour(double arr[], int n) {
+    double sum = 0.0;
+    for (int i = n - 4; i < n; i++) {  // Sum the last 4 elements (largest 4)
+        sum += arr[i];
+    }
+    return sum / 4.0;
+}
+
+int main() {
+    Queue q;
+    createQ(&q);
+
+    double numbers[] = {5.4, 3.6, 106.8, 0.9, 272, 8.4, 1900.5, 4.5};
+    int n = sizeof(numbers) / sizeof(numbers[0]);
+
+    for (int i = 0; i < n; i++) {
+        appendQ(&q, numbers[i]);
+    }
+
+    List L;
+    L.count = 0;
+
+    while (!isEmpty(&q)) {
+        L.entry[L.count++] = serveQ(&q);
+    }
+
+    bubbleSort(L.entry, L.count);
+
+    printf("Sorted List:\n");
+    for (int i = 0; i < L.count; i++) {
+        printf("%.2lf ", L.entry[i]);
+    }
+    printf("\n");
+
+    // Compute the mean of the largest four numbers
+    double mean = computeMeanOfLargestFour(L.entry, L.count);
+    printf("Mean of the largest four numbers: %.2lf\n", mean);
+
+    return 0;
+}
